@@ -1,120 +1,155 @@
-import React from 'react'
-import { useState ,useLayoutEffect} from 'react'
-import { MdArrowDropUp } from "react-icons/md";
-import { MdArrowDropDown } from "react-icons/md";
-import MainBoxStyle from './style/MainBoxStyle'
-import PieChartComponent from './PiChart'
-import ClockMeter from './ClockMeter'
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import Skeleton from 'react-loading-skeleton';
+import { MdArrowDropUp, MdArrowDropDown } from "react-icons/md";
+import MainBoxStyle from './style/MainBoxStyle';
+import PieChartComponent from './PiChart';
+import ClockMeter from './ClockMeter';
 import axios from "axios";
-import {API} from '../utils/api'
-import MainBox from './MainBox'
+import { API } from '../utils/api';
+import MainBox from './MainBox';
 import Logo from './Logo';
 import EuroRate from './EuroRate';
 
-
 function FirstPage() {
+  const [isLoading, setIsLoading] = useState(true);
   const [trendingData, setTrendingData] = useState([]);
   const [gainersDayData, setGainersDayData] = useState([]);
   const [loosersDayData, setLoosersDayData] = useState([]);
-  const [bitcoinData, setBitcoinData] = useState({price:0,percent:0});
-  const [ethereumData, setEthereumData] = useState({price:0,percent:0});
-  const [globalData, setGlobalData] = useState({marketCap:0,marketCapPercent:0,volume:0,volume_percent:0})
-  const getData=async()=>{
-    const res=await axios.get(`${API}/trending/latest`);
-    const res_bit_ether=await axios.get(`${API}/latest`);
-    const res_gainers=await axios.get(`${API}/trending/losers-gainer?time=24h&sort=desc&limit=5`)
-    const res_loosers=await axios.get(`${API}/trending/losers-gainer?time=24h&sort=asc&limit=5`)
-    const res_global=await axios.get(`${API}/market-cap`)
-
-
-    if (res_global?.data?.status==='success'){
-      const data={
-        marketCap:(res_global?.data?.data?.quote?.USD?.total_market_cap/1e12).toFixed(2),
-        marketCapPercent:res_global?.data?.data?.quote?.USD?.total_market_cap_yesterday_percentage_change.toFixed(2),
-        volume:(res_global?.data?.data?.quote?.USD?.total_volume_24h/1e9).toFixed(2),
-        volume_percent:res_global?.data?.data?.quote?.USD?.total_volume_24h_yesterday_percentage_change.toFixed(2)
-      }
-      setGlobalData(data)
-
-
-    }
-
-
-    if (res_bit_ether?.data?.status==='success'){
-      
-      const bitcoinData = res_bit_ether?.data?.data.find(item => item.id === 1);
-
-      if (bitcoinData) {
-        const { price, percent_change_24h: percent } = bitcoinData?.quote?.USD ?? {};
-        setBitcoinData({ price, percent });
-      }
-
-
-
-      const ethereumDataItem = res_bit_ether?.data?.data.find(item => item.id === 1027);
-
-      if (ethereumDataItem) {
-        const { price, percent_change_24h: percent } = ethereumDataItem?.quote?.USD ?? {};
-        setEthereumData({ price, percent });
-      }
-
-
-    if (res?.data?.status==='success'){
-      const arr = res?.data?.data.slice(0,6);
-      const data=arr.map(item=>({
-        logo:item.id,
-        name:item.symbol,
-      }))
-      setTrendingData(data)
-    }
-
-  }
-
-
-    if (res_gainers?.data?.status==='success'){
-      const top_5 = res_gainers?.data?.data;
-      const gainers = top_5.map(item => ({
-       name: item.symbol,
-       percentage: item?.quote?.USD?.percent_change_24h,
-       logo: item.id
-     }));
-     setGainersDayData(gainers);
-    }
- 
-    if (res_loosers?.data?.status==='success'){
-     const top_5 = res_loosers?.data?.data;
-     const loosers = top_5.map(item => ({
-      name: item.symbol,
-      percentage: item?.quote?.USD?.percent_change_24h,
-      logo: item.id
-    }));
-    setLoosersDayData(loosers);
-   }
-    
-  }
+  const [bitcoinData, setBitcoinData] = useState({ price: 0, percent: 0 });
+  const [ethereumData, setEthereumData] = useState({ price: 0, percent: 0 });
+  const [globalData, setGlobalData] = useState({ marketCap: 0, marketCapPercent: 0, volume: 0, volume_percent: 0 });
 
   useLayoutEffect(() => {
-  
     getData();
-   
-  },[])
+  }, []);
 
+  const getData = async () => {
+    try {
+      const [res, res_bit_ether, res_gainers, res_loosers, res_global] = await Promise.all([
+        axios.get(`${API}/trending/latest`),
+        axios.get(`${API}/latest`),
+        axios.get(`${API}/trending/losers-gainer?time=24h&sort=desc&limit=5`),
+        axios.get(`${API}/trending/losers-gainer?time=24h&sort=asc&limit=5`),
+        axios.get(`${API}/market-cap`)
+      ]);
+
+      if (res_global?.data?.status === 'success') {
+        const data = {
+          marketCap: (res_global?.data?.data?.quote?.USD?.total_market_cap / 1e12).toFixed(2),
+          marketCapPercent: res_global?.data?.data?.quote?.USD?.total_market_cap_yesterday_percentage_change.toFixed(2),
+          volume: (res_global?.data?.data?.quote?.USD?.total_volume_24h / 1e9).toFixed(2),
+          volume_percent: res_global?.data?.data?.quote?.USD?.total_volume_24h_yesterday_percentage_change.toFixed(2)
+        }
+        setGlobalData(data);
+      }
+
+      if (res_bit_ether?.data?.status === 'success') {
+        const bitcoinData = res_bit_ether?.data?.data.find(item => item.id === 1);
+        if (bitcoinData) {
+          const { price, percent_change_24h: percent } = bitcoinData?.quote?.USD ?? {};
+          setBitcoinData({ price, percent });
+        }
+
+        const ethereumDataItem = res_bit_ether?.data?.data.find(item => item.id === 1027);
+        if (ethereumDataItem) {
+          const { price, percent_change_24h: percent } = ethereumDataItem?.quote?.USD ?? {};
+          setEthereumData({ price, percent });
+        }
+      }
+
+      if (res?.data?.status === 'success') {
+        const arr = res?.data?.data.slice(0, 6);
+        const data = arr.map(item => ({
+          logo: item.id,
+          name: item.symbol,
+        }));
+        setTrendingData(data);
+      }
+
+      if (res_gainers?.data?.status === 'success') {
+        const top_5 = res_gainers?.data?.data;
+        const gainers = top_5.map(item => ({
+          name: item.symbol,
+          percentage: item?.quote?.USD?.percent_change_24h,
+          logo: item.id
+        }));
+        setGainersDayData(gainers);
+      }
+
+      if (res_loosers?.data?.status === 'success') {
+        const top_5 = res_loosers?.data?.data;
+        const loosers = top_5.map(item => ({
+          name: item.symbol,
+          percentage: item?.quote?.USD?.percent_change_24h,
+          logo: item.id
+        }));
+        setLoosersDayData(loosers);
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setIsLoading(false);
+    }
+  }
 
   function numberWithCommas(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
+  }
 
- 
+  if (isLoading) {
+    // Placeholder skeleton while data is loading
+    return (
+      <div className='py-2 text-center px-8 lg:px-16 flex items-center flex-col gap-3 text-white'>
+        <Skeleton height={44} width={200} />
+        <MainBoxStyle>
+          <div className='flex flex-col md:flex-row items-center gap-10 w-full p-3 '>
+            <div className='w-[50%] flex items-center flex-col '>
+              <Skeleton height={200} width={200} />
+            </div>
+            <div className='w-full sm:w-[50%] flex flex-col  items-center gap-3'>
+              <div className='flex  bg-[#4C4C4C] rounded-[40px] p-3  items-center gap-10'>
+                <div className='flex items-center flex-col '>
+                  <Skeleton height={50} width={50} />
+                  <Skeleton height={20} width={100} />
+                  <Skeleton height={30} width={100} />
+                  <Skeleton height={20} width={100} />
+                </div>
+                <div className='flex  items-center  flex-col '>
+                  <Skeleton height={50} width={50} />
+                  <Skeleton height={20} width={100} />
+                  <Skeleton height={30} width={100} />
+                  <Skeleton height={20} width={100} />
+                </div>
+              </div>
+              <div className='flex bg-[#4C4C4C]  rounded-[50px] py-1 px-14  items-center flex-col '>
+                <Skeleton height={20} width={100} />
+                <Skeleton height={20} width={100} />
+                <Skeleton height={20} width={100} />
+              </div>
+              <div className='flex bg-[#4C4C4C] rounded-[50px] py-1 px-8 flex-col  items-center'>
+                <Skeleton height={20} width={100} />
+                <Skeleton height={20} width={100} />
+                <Skeleton height={20} width={100} />
+              </div>
+            </div>
+          </div>
+        </MainBoxStyle>
+        {/* Placeholder for other components */}
+      </div>
+    );
+  }
+
   return (
-    <div className='py-2 text-center px-16 flex items-center flex-col gap-3 text-white'>
-      <h1 className='text-[44px] text-center font-bold text-white' ><span className='text-orange'>KRİPTO</span> PİYASASINDA GÜNCEL <span className='text-orange'>TABLO</span></h1>
+    <div className='py-2 text-center px-8 lg:px-16 flex items-center flex-col gap-3 text-white'>
+      <h1 className=' text-[30px] sm:text-[44px] text-center font-bold text-white' ><span className='text-orange'>KRİPTO</span> PİYASASINDA GÜNCEL <span className='text-orange'>TABLO</span></h1>
       <MainBoxStyle>
-        <div className='flex items-center gap-10 w-full p-3 '>
+        <div className='flex flex-col md:flex-row items-center gap-10 w-full p-3 '>
           <div className='w-[50%] flex items-center flex-col '>
             <h1 className='text-special font-bold  text-[24px] '>PİYASA HAKİMİYETİ</h1>
             <PieChartComponent/>
           </div>
-          <div className='w-[50%] flex flex-col  items-center gap-3'>
+          <div className='w-full sm:w-[50%] flex flex-col  items-center gap-3'>
             <div className='flex  bg-[#4C4C4C] rounded-[40px] p-3  items-center gap-10'>
               <div className='flex items-center flex-col '>
                 <Logo/>
@@ -135,7 +170,7 @@ function FirstPage() {
                 </div>
               </div>
             </div>
-            <div className='flex bg-[#4C4C4C] rounded-[50px] py-1 px-14  items-center flex-col '>
+            <div className='flex bg-[#4C4C4C]  rounded-[50px] py-1 px-14  items-center flex-col '>
               <h1 className='text-special font-bold   text-[20px]'>MARKET CAP</h1>
               <h1 className='font-bold text-[20px]'>{globalData.marketCap} TRIİLYON$</h1>
               <div className='flex items-center font-bold  mt-[-10px]  text-[18px]'>
@@ -154,8 +189,8 @@ function FirstPage() {
           </div>
         </div>
       </MainBoxStyle>
-      <div className='flex w-full items-center gap-10'>
-          <div className='w-[50%] flex flex-col gap-4 items-center'>
+      <div className='flex flex-col sm:flex-row w-full items-center gap-10'>
+          <div className='w-full  sm:w-[50%] flex flex-col gap-4 items-center'>
             
             <MainBoxStyle>
               <div className='flex flex-col gap-2 w-full items-center'>
@@ -166,7 +201,7 @@ function FirstPage() {
             </MainBoxStyle>
           </div>
 
-          <div className='w-[50%]'>
+          <div className='w-full sm:w-[50%]'>
             <MainBoxStyle>
               <div className='flex flex-col gap-3 w-full items-center'>
                 <h1 className='text-special font-bold text-[24px]'>Trend Kripto Paralar 24H</h1>
@@ -189,16 +224,20 @@ function FirstPage() {
           <h1 className='font-bold text-[22px]'><span className='text-orange'>$ </span><EuroRate/><span className='text-[#8F8F8F]'>€</span></h1>
         </div>
       </div>
-      <div className='flex justify-between w-full gap-16 items-center'>
-            <div className='w-[50%]'>
+      <div className='flex flex-col sm:flex-row justify-between w-full gap-4  md:gap-16 items-center'>
+            <div className='w-full sm:w-[50%]'>
               <MainBox  heading={<h1  className='text-special font-bold  text-[24px]'>Yükselen Kripto Paralar 24H</h1>} list_items={gainersDayData} />
             </div>
-            <div className='w-[50%]'>
+            <div className='w-full sm:w-[50%]'>
               <MainBox heading={<h1  className='text-special font-bold   text-[24px]'>Düşen Kripto Paralar 24H</h1>}  list_items={loosersDayData}/>
             </div>
         </div>
     </div>
   )
 }
+
+
+  
+
 
 export default FirstPage
